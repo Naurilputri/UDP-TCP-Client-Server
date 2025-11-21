@@ -1,4 +1,4 @@
-# 🟦 TCP Client-Server || Konfigurasi Step by Step
+# 🟩 UDP Client-Server || Konfigurasi Step by Step
 
 > [!NOTE]
 > ## ❕ Disclaimer  
@@ -8,15 +8,18 @@
 > 🔗 **Referensi Video:**  
 > <div align="center">
 >
-> <a href="https://www.youtube.com/watch?v=GlVfVn17_ug">
->   <img src="https://img.youtube.com/vi/GlVfVn17_ug/0.jpg" width="270">
+> <a href="https://www.youtube.com/watch?v=bKfDS1lOSho">
+>   <img src="https://img.youtube.com/vi/bKfDS1lOSho/0.jpg" width="270">
+> </a>
+>
+> <a href="https://www.youtube.com/watch?v=i1AOd7AQcok">
+>   <img src="https://img.youtube.com/vi/i1AOd7AQcok/0.jpg" width="270">
 > </a>
 >
 > </div>
 
 
 Apabila anda ingin langsung mencoba *source code* ini, bisa menggunakan langkah-langkah berikut:
-
 
 **📎Clone Repository**
 
@@ -29,15 +32,15 @@ git clone https://github.com/RockHead07/UDP-TCP-Client-Server.git
 Kemudian masuk direktori UDP nya:
 
 ```bash
-cd UDP-TCP-Client-Server/TCP\ Client\ Server
+cd UDP-TCP-Client-Server/UDP\ Client\ Server
 ```
 
 ### 📂 Struktur File
 
 ```arduino
-TCP Client Server/
-├── tcpServer.py
-├── tcpClient.py
+UDP Client Server/
+├── udpServer.py
+├── udpClient.py
 └── README.md
 ```
 
@@ -57,105 +60,83 @@ py --version
 
 Apabila *output* nya menampilkan keluaran dari versi `Python` itu sendiri, maka artinya `Python` sudah terinstall di perangkat mu.
 
-### TCP Server
+### UDP Server
 
-Langkah pertama adalah membuat dan menjalankan *TCP Server*. Berbeda dengan *UDP*, protokol *TCP* bersifat *connection-oriented*, sehingga *client* harus melakukan proses *handshake* terlebih dahulu sebelum mengirim data.
+Yang pertama kita lakukan, ialah membuat server dari *UDP* nya terlebih dahulu sebelum menjalankan *client*. Server ini nantinya berguna untuk menerima pesan dari *client* dan mengirimkan responnya kembali. 
 
-Berikut *code program* ***TCP Server***:
+Berikut *code program* ***UDP Server*** nya:
 
 ```Python
 import socket  # Mengimpor library socket untuk komunikasi jaringan
 
-# Mengecek apakah script dijalankan langsung (bukan diimport)
-if __name__ == "__main__":
-    ip = "127.0.0.1"       # IP server (localhost)
-    port = 12345           # Port server untuk mendengarkan koneksi
+# Konfigurasi server
+localIP = "127.0.0.1"   # IP tempat server berjalan (localhost)
+localPort = 9997        # Port yang digunakan server
+buffer = 1024           # Ukuran maksimum data yang dapat diterima
 
-    # Membuat socket TCP (SOCK_STREAM = TCP)
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# Membuat socket UDP
+serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# Mengikat socket ke IP dan port sehingga server siap menerima data
+serverSocket.bind((localIP, localPort))  # Menyalakan server UDP
 
-    # Mengikat server pada IP dan port
-    server.bind((ip, port))
+print("UDP server up and listening on")
 
-    # Memulai server untuk mendengarkan koneksi masuk
-    # Angka 5 berarti maksimal 5 koneksi yang dapat masuk ke "antrian"
-    server.listen(5)
+# Server terus-menerus mendengarkan pesan dari client
+while True:
+    data = serverSocket.recvfrom(buffer)  # Menerima data dari client
+    pesan = data[0]                       # Bagian pertama berisi pesan
+    ip_address = data[1]                  # Bagian kedua berisi alamat (IP, port) client
 
-    # Server terus berjalan dan menerima koneksi dari client
-    while True:
-        # Menerima koneksi dari client
-        client, address = server.accept()
+    # Menampilkan pesan dan alamat client ke terminal
+    print("Pesan dari Client: \"{}\"".format(pesan))
+    print("IP address Client: \"{}\"".format(ip_address))
 
-        # Menampilkan alamat client yang baru terhubung
-        print(f"Connection from {address[0]}:{address[1]} has been established!")
-
-        # Menerima data dari client (maks 1024 bytes)
-        string = client.recv(1024)
-        
-        # Decode data dari bytes ke string UTF-8
-        string = string.decode("utf-8")
-        
-        # Mengubah pesan menjadi huruf besar
-        string = string.upper()
-
-        # Mengirimkan balik (echo) ke client dalam bentuk bytes
-        client.send(bytes(string, 'utf-8'))
-
-        # Menutup koneksi dengan client
-        client.close()
+    # Server membalas pesan ke client
+    serverSocket.sendto(b"Selamat datang di UDP Server", ip_address)
 ```
 
 Cara menjalankan *code program* diatas, yang pertama buka terminal pada direktori projek yang kalian kerjakan, lalu jalankan perintah berikut di terminal:
 
 ```bash
-python tcpServer.py
+python udpServer.py
 ```
 
-*Server* akan aktif dan menunggu koneksi dari *Client*.
+Maka, server akan aktif dan menunggu pesan dari *client*.
 
-### TCP Client
+### UDP Client
 
-Setelah ***TCP Server*** siap, selanjutnya membuat *client* untuk mengirim pesan dan menerima balasan respon dari *server*.
-
-Berikut *code program* ***TCP Client***:
+Karena ***UDP Server*** telah dibuat, maka sekarang saatnya melakukan konfigurasi untuk ***UDP Client*** nya. *Client* ini akan bertugas untuk mengirim pesan ke server dan menunggu balasan dari *server*. Berikut *code program* nya:
 
 ```python
 import socket  # Mengimpor library socket untuk komunikasi jaringan
 
-# Mengecek apakah script dijalankan langsung
-if __name__ == "__main__":
-    ip = "127.0.0.1"     # IP server tujuan (localhost)
-    port = 12345         # Port server tujuan
+# Konfigurasi target (alamat server tujuan)
+target_host = "127.0.0.1"   # IP server (localhost)
+target_port = 9997          # Port server yang digunakan untuk berkomunikasi
 
-    # Membuat socket TCP (SOCK_STREAM berarti protokol TCP)
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# Membuat socket UDP
+client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-    # Melakukan koneksi ke server dengan IP dan port yang ditentukan
-    server.connect((ip, port))
-    
-    # Meminta input dari user untuk dikirim ke server
-    string = input("Enter a message to send to the server: ")
+# Mengirim data ke server (dalam bentuk bytes)
+client.sendto(b"Hello UDP Server", (target_host, target_port))
 
-    # Mengirim pesan ke server dalam bentuk bytes
-    server.send(bytes(string, 'utf-8'))
+# Menerima balasan dari server
+data, address = client.recvfrom(4096)    # 4096 = ukuran maksimum data yang diterima
 
-    # Menerima balasan dari server (maks 1024 bytes)
-    buffer = server.recv(1024)
+# Menampilkan balasan server ke terminal
+print("Respon dari server: \"{}\"".format(data.decode()))
 
-    # Mengubah data bytes menjadi string UTF-8
-    buffer = buffer.decode("utf-8")
-
-    # Menampilkan respon dari server
-    print(f"Server response: {buffer}")
+# Menutup koneksi socket client
+client.close()
 ```
 
 Setelah *code program* client selesai dibuat, jalankan *client* dengan membuka terminal baru (*biarkan terminal pada bagian server tetap aktif*), lalu jalankan perintah berikut:
 
 ```bash
-python tcpClient.py
+python udpClient.py
 ```
 
-Jika berhasil, maka *client* akan memeberi kita opsi untuk mengirim pesan apapun, yang nantinya server mengembalikan ke versi huruf kapitalnya / **UPPERCASE** dari pesan tersebut.
+Jika berhasil, maka *client* akan mengirimkan pesan ke server, menerima respon, dan menampilkan hasilnya pada terminal.
 
 ### 📤 Output
 
@@ -164,20 +145,17 @@ Berikut, contoh keluaran *output* nya ketika program dijalankan:
 #### Output pada *terminal* Server
 
 ```bash
-Connection from 127.0.0.1:63789 has been established!
+UDP server up and listening on
+Pesan dari Client: "b'Hello UDP Server'"
+IP address Client: "('127.0.0.1', 62341)"
 ```
 
 #### Output pada *terminal* Client
 
-Apabila kita melakukan *input* pesannya seperti dibawah ini, akan dikembalikan menjadi huruf kapital semua.
-
 ```bash
-Enter a message to send to the server: Indonesia
-Server response: INDONESIA
+Respon dari server: "Selamat datang di UDP Server"
 ```
 
 # ✨ Kesimpulan
 
-Dari konfigurasi *TCP Client-Server* ini, dapat kita simpulkan bahwa komunikasi yang menggunakan protokol *TDP* berjalan dengan konsep *connection-oriented*, yang dimana sebelum proses pengiriman data terjadi, *client* harus terlebih dahulu membuat koneksi (*three-way handshake*) ke server.
-
-Hal ini membuat ***TCP*** lebih dapat diandalkan / *reliable* dibandingkan menggunakan ***UDP***, karena setiap data yang dikirim akan dijamin sampai dengan urutan yang benar. Server menerima pesan dari *client*, memprosesnya (mengubah menjadi huruf kapital), kemudian mengirimkan kembali ke client sebelum menutup koneksi.
+Dari konfigurasi *UDP Client-Server* ini, dapat kita simpulkan bahwa komunikasi yang menggunakan protokol *UDP* berjalan dengan konsep *connectionless*, yang dimana *client* dapat langsung mengirimkan data ke server tanpa perlu melakukan proses *handshake* terlebih dahulu. Server hanya perlu mendengarkan pada IP & port tertentu, kemudian menrima pesan dan mengirimkan balasnnya.
